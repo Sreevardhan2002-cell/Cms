@@ -4,7 +4,9 @@ from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.db.models import Count, Sum
+from django.db.models import Max
 from django.db.models.functions import TruncDate
+from decimal import Decimal
 from .models import (
     Role, Staff, Specialization, Doctor, Membership, Patient,
     Appointment, Consultation, MedicineCategory, Medicine,
@@ -75,6 +77,19 @@ class AppointmentViewSet(viewsets.ModelViewSet):
     queryset = Appointment.objects.all()
     serializer_class = AppointmentSerializer
 
+    def create(self, request, *args, **kwargs):
+        data = request.data.copy()
+
+        if not data.get('token_number'):
+            next_token = (Appointment.objects.aggregate(max_token=Max('token_number'))['max_token'] or 0) + 1
+            data['token_number'] = next_token
+
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
     @action(detail=True, methods=['patch'])
     def cancel(self, request, pk=None):
         appointment = self.get_object()
@@ -100,7 +115,7 @@ class AppointmentViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'], url_path='doctor/(?P<doctor_id>[^/.]+)')
     def by_doctor(self, request, doctor_id=None):
-        appointments = self.queryset.filter(doctor_id=doctor_id)
+        appointments = self.queryset.filter(doctor_id=doctor_id).order_by('token_number', 'appointment_date')
         serializer = self.get_serializer(appointments, many=True)
         return Response(serializer.data)
 
@@ -216,7 +231,9 @@ class MedicinePrescriptionViewSet(viewsets.ModelViewSet):
 
             # Generate or update Bill
             bill, created = Bill.objects.get_or_create(appointment=prescription.appointment)
-            bill.total_amount += (prescription.medicine.unit_price * total_quantity)
+            bill.total_amount = Decimal(str(bill.total_amount or 0)) + (
+                Decimal(str(prescription.medicine.unit_price or 0)) * Decimal(str(total_quantity))
+            )
             bill.save()
 
             return Response({"message": f"Medicine dispensed successfully ({total_quantity} units)", "bill_id": bill.id, "total_amount": bill.total_amount})
@@ -274,7 +291,7 @@ class LabTestPrescriptionViewSet(viewsets.ModelViewSet):
 
         # Generate or update Bill
         bill, created = Bill.objects.get_or_create(appointment=prescription.appointment)
-        bill.total_amount += prescription.lab_test.amount
+        bill.total_amount = Decimal(str(bill.total_amount or 0)) + Decimal(str(prescription.lab_test.amount or 0))
         bill.save()
 
         return Response({"message": "Lab test evaluated successfully", "bill_id": bill.id, "total_amount": bill.total_amount})
@@ -302,9 +319,9 @@ class MedicineStockViewSet(viewsets.ModelViewSet):
 
 @api_view(['POST'])
 def staff_login(request):
-    username = request.data.get('username')
-    password = request.data.get('password')
-    role_name = request.data.get('role')
+    username = (request.data.get('username') or '').strip()
+    password = (request.data.get('password') or '').strip()
+    role_name = (request.data.get('role') or '').strip()
 
     if not username or not password or not role_name:
         return Response({'error': 'Please provide username, password, and role'}, status=status.HTTP_400_BAD_REQUEST)
@@ -325,7 +342,6 @@ def staff_login(request):
         return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
 def dashboard_stats(request):
     try:
         all_appointments = Appointment.objects.all()

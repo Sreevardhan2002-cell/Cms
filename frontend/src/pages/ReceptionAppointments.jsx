@@ -2,6 +2,15 @@ import React, { useState, useEffect } from 'react';
 import api from '../api';
 import { CalendarPlus, X } from 'lucide-react';
 
+const formatDateTime12Hour = value =>
+    value
+        ? new Intl.DateTimeFormat('en-US', {
+              dateStyle: 'medium',
+              timeStyle: 'short',
+              hour12: true
+          }).format(new Date(value))
+        : '-';
+
 const ReceptionAppointments = () => {
     const [appointments, setAppointments] = useState([]);
     const [patients, setPatients] = useState([]);
@@ -118,7 +127,7 @@ const ReceptionAppointments = () => {
                                 <tr><td colSpan="5" style={{ textAlign: 'center', padding: '2rem' }}>No appointments scheduled</td></tr>
                             ) : appointments.map(appt => (
                                 <tr key={appt.id}>
-                                    <td>{new Date(appt.appointment_date).toLocaleString()}</td>
+                                    <td>{formatDateTime12Hour(appt.appointment_date)}</td>
                                     <td>#{appt.token_number}</td>
                                     <td style={{ fontWeight: 500 }}>{appt.patient_details?.patient_name || 'Unknown'}</td>
                                     <td>{appt.doctor_details?.staff_details?.full_name ? `Dr. ${appt.doctor_details.staff_details.full_name}` : 'Unknown'}</td>
@@ -190,6 +199,9 @@ const ReceptionAppointments = () => {
                                 <div className="input-group" style={{ flex: 2 }}>
                                     <label className="input-label">Date & Time</label>
                                     <input type="datetime-local" name="appointment_date" className="input-field" value={formData.appointment_date} onChange={handleInputChange} required />
+                                    <small style={{ display: 'block', marginTop: '0.5rem', color: 'var(--text-muted)' }}>
+                                        Selected: {formatDateTime12Hour(formData.appointment_date)}
+                                    </small>
                                 </div>
                                 <div className="input-group" style={{ flex: 1 }}>
                                     <label className="input-label">Token #</label>

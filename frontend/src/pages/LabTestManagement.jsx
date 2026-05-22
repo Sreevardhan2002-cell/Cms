@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import api from '../api';
 import { FlaskConical, Plus, ListPlus, Trash2 } from 'lucide-react';
 
@@ -25,10 +25,14 @@ const LabTestManagement = () => {
                 api.get('labtests/'),
                 api.get('labtest-categories/')
             ]);
+
             setTests(testRes.data);
             setCategories(catRes.data);
-            if (catRes.data.length > 0 && !formData.category) {
-                setFormData(prev => ({ ...prev, category: catRes.data[0].id }));
+
+            if (catRes.data.length > 0) {
+                setFormData(prev => (
+                    prev.category ? prev : { ...prev, category: catRes.data[0].id }
+                ));
             }
         } catch (err) {
             console.error("Failed to fetch lab tests", err);
@@ -36,7 +40,9 @@ const LabTestManagement = () => {
     };
 
     useEffect(() => {
-        fetchData();
+        void (async () => {
+            await fetchData();
+        })();
     }, []);
 
     const handleInputChange = (e) => {
@@ -102,6 +108,7 @@ const LabTestManagement = () => {
 
             <div className="glass-panel">
                 <div className="table-container">
+                    <br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br />
                     <table className="table">
                         <thead>
                             <tr>
@@ -137,7 +144,7 @@ const LabTestManagement = () => {
 
             {/* Modal for adding Category */}
             {showCategoryModal && (
-                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 , paddingTop: '5vh'}}>
                     <div className="glass-panel animate-fade-in" style={{ width: '100%', maxWidth: '400px', padding: '2rem' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                             <h2 style={{ margin: 0 }}>Add Category</h2>

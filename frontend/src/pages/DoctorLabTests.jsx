@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
-import { Microscope, Clock, CheckCircle, FileText, Search } from 'lucide-react';
+import { Microscope, Clock, FileText, Search } from 'lucide-react';
 
 const DoctorLabTests = () => {
     const { user } = useAuth();
@@ -37,7 +37,7 @@ const DoctorLabTests = () => {
         printWindow.document.write(`
             <html>
                 <head>
-                    <title>Lab Report - ClinicSys</title>
+                    <title>Lab Report - Maclinic</title>
                     <style>
                         body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; padding: 40px; color: #2d3748; }
                         h1 { color: #4F46E5; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; }
@@ -48,9 +48,9 @@ const DoctorLabTests = () => {
                     </style>
                 </head>
                 <body>
-                    <h1>ClinicSys Lab Report</h1>
+                    <h1>Maclinic Lab Report</h1>
                     <div class="details">
-                        <p><strong>Date:</strong> ${new Date(pres.created_date || Date.now()).toLocaleDateString()}</p>
+                        <p><strong>Date:</strong> ${pres.created_date ? new Date(pres.created_date).toLocaleDateString() : 'N/A'}</p>
                         <p><strong>Appointment Ref:</strong> #${pres.appointment}</p>
                     </div>
                     <table>
@@ -65,7 +65,7 @@ const DoctorLabTests = () => {
                         <tbody>
                             <tr>
                                 <td><strong>${pres.lab_test_details?.test_name}</strong></td>
-                                <td style="color: #4F46E5; font-weight: bold;">${pres.lab_test_value}</td>
+                                <td style="color: var(--primary); font-weight: bold;">${pres.lab_test_value}</td>
                                 <td>${pres.lab_test_details?.reference_min_range} - ${pres.lab_test_details?.reference_max_range}</td>
                                 <td>${pres.lab_test_details?.sample_required}</td>
                             </tr>

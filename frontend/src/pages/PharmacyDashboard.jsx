@@ -5,6 +5,7 @@ import { Pill, AlertTriangle, Archive, Clock, AlertCircle, PackageCheck, ShieldC
 const PharmacyDashboard = () => {
     const [medicines, setMedicines] = useState([]);
     const [stocks, setStocks] = useState([]);
+    const [prescriptions, setPrescriptions] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -16,6 +17,15 @@ const PharmacyDashboard = () => {
                 ]);
                 setMedicines(medRes.data);
                 setStocks(stockRes.data);
+
+                try {
+                    const presRes = await api.get('prescriptions/medicine/');
+                    setPrescriptions(presRes.data);
+                } catch (presErr) {
+                    console.error('Failed to fetch prescriptions', presErr);
+                    setPrescriptions([]);
+                }
+
                 setLoading(false);
             } catch (err) {
                 console.error("Failed to fetch dashboard data", err);
@@ -26,6 +36,9 @@ const PharmacyDashboard = () => {
     }, []);
 
     const lowStockItems = stocks.filter(s => s.stock_in_hand <= (s.re_order_level || 5));
+    const pendingPrescriptions = prescriptions
+        .filter(p => !p.is_dispensed)
+        .sort((a, b) => new Date(b.created_date || 0) - new Date(a.created_date || 0));
     
     // Near Expiry: within 5 days
     const today = new Date();
@@ -92,6 +105,42 @@ const PharmacyDashboard = () => {
                                     <Clock size={28} />
                                 </div>
                             </div>
+                        </div>
+                    </div>
+
+                    <div className="glass-panel" style={{ padding: 0, overflow: 'hidden', marginBottom: '2rem', border: '1px solid rgba(5,150,105,0.18)' }}>
+                        <div style={{ padding: '1.5rem', background: 'linear-gradient(90deg, rgba(5,150,105,0.08) 0%, transparent 100%)', borderBottom: '1px solid var(--border)' }}>
+                            <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--primary)', margin: 0, fontSize: '1.25rem' }}>
+                                <Pill size={20} /> Pending Doctor Prescriptions
+                            </h3>
+                        </div>
+
+                        <div style={{ padding: '1.5rem' }}>
+                            {pendingPrescriptions.length === 0 ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '1.5rem 1rem', textAlign: 'center' }}>
+                                    <div style={{ background: 'rgba(16, 185, 129, 0.1)', padding: '1rem', borderRadius: '50%', marginBottom: '1rem' }}>
+                                        <PackageCheck size={32} color="var(--success)" />
+                                    </div>
+                                    <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-main)', fontSize: '1.1rem' }}>No pending prescriptions</h4>
+                                    <p style={{ margin: 0, color: 'var(--text-muted)' }}>New prescriptions from doctors will appear here for dispensing.</p>
+                                </div>
+                            ) : (
+                                <div style={{ display: 'grid', gap: '1rem' }}>
+                                    {pendingPrescriptions.slice(0, 5).map(pres => (
+                                        <div key={pres.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem', background: 'var(--background)', borderRadius: '12px', border: '1px solid var(--border)', borderLeft: '4px solid var(--primary)' }}>
+                                            <div>
+                                                <div style={{ fontWeight: '600', color: 'var(--text-main)', fontSize: '1.02rem', marginBottom: '0.25rem' }}>
+                                                    {pres.medicine_details?.medicine_name || 'Medicine'}
+                                                </div>
+                                                <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                                                    Appt #{pres.appointment} • {pres.dosage} • {pres.duration}
+                                                </div>
+                                            </div>
+                                            <span className="badge badge-warning" style={{ fontSize: '0.8rem', padding: '0.4rem 0.8rem' }}>Pending</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     </div>
 

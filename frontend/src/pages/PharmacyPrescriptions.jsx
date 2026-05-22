@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import api from '../api';
 import { Pill, CheckCircle, Printer, AlertCircle, History, Clock } from 'lucide-react';
 
@@ -8,18 +8,18 @@ const PharmacyPrescriptions = () => {
     const [success, setSuccess] = useState('');
     const [activeTab, setActiveTab] = useState('Pending');
 
-    const fetchPrescriptions = async () => {
-        try {
-            const res = await api.get('prescriptions/medicine/');
-            setPrescriptions(res.data);
-        } catch (err) {
-            console.error("Failed to fetch prescriptions", err);
-            setError("Could not load prescriptions.");
-        }
-    };
-
     useEffect(() => {
-        fetchPrescriptions();
+        const loadPrescriptions = async () => {
+            try {
+                const res = await api.get('prescriptions/medicine/');
+                setPrescriptions(res.data);
+            } catch (err) {
+                console.error("Failed to fetch prescriptions", err);
+                setError("Could not load prescriptions.");
+            }
+        };
+
+        loadPrescriptions();
     }, []);
 
     const dispenseAll = async (prescriptionsArray) => {
@@ -47,11 +47,22 @@ const PharmacyPrescriptions = () => {
         if (successCount > 0) {
             setSuccess(`Dispensed ${successCount} medicines successfully.`);
         }
-        fetchPrescriptions();
+        try {
+            const res = await api.get('prescriptions/medicine/');
+            setPrescriptions(res.data);
+        } catch (err) {
+            console.error("Failed to fetch prescriptions", err);
+            setError("Could not load prescriptions.");
+        }
     };
 
     const handlePrintBill = (apptGroup) => {
         let overallSubtotal = 0;
+        const formatCurrency = (amount) => new Intl.NumberFormat('en-IN', {
+            style: 'currency',
+            currency: 'INR',
+            maximumFractionDigits: 2
+        }).format(amount);
         
         const rows = apptGroup.prescriptions.map(pres => {
             let perDay = 1;
@@ -81,8 +92,8 @@ const PharmacyPrescriptions = () => {
                     <td><strong>${pres.medicine_details?.medicine_name || 'Medicine'}</strong></td>
                     <td>${pres.dosage} for ${pres.duration}</td>
                     <td>${totalQuantity}</td>
-                    <td style="text-align: right;">$${unitPrice.toFixed(2)}</td>
-                    <td style="text-align: right;">$${subtotal.toFixed(2)}</td>
+                    <td style="text-align: right;">${formatCurrency(unitPrice)}</td>
+                    <td style="text-align: right;">${formatCurrency(subtotal)}</td>
                 </tr>
             `;
         }).join('');
@@ -90,12 +101,13 @@ const PharmacyPrescriptions = () => {
         const gstRate = 0.12; // 12% GST
         const gstAmount = overallSubtotal * gstRate;
         const totalAmount = overallSubtotal + gstAmount;
+        const invoiceNumber = `#INV-${apptGroup.appointment}-${apptGroup.prescriptions.length}`;
 
         const printWindow = window.open('', '', 'width=800,height=900');
         printWindow.document.write(`
             <html>
                 <head>
-                    <title>Pharmacy Invoice - ClinicSys</title>
+                    <title>maclinic lab report</title>
                     <style>
                         body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; padding: 40px; color: #2d3748; background: #f7fafc; }
                         .invoice-box { max-width: 800px; margin: auto; padding: 40px; border: 1px solid #e2e8f0; background: #fff; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); border-radius: 8px; }
@@ -121,14 +133,14 @@ const PharmacyPrescriptions = () => {
                     <div class="invoice-box">
                         <div class="header">
                             <div class="hospital-details">
-                                <h1>ClinicSys Hospital</h1>
+                                <h1>maclinic lab report</h1>
                                 <p>123 Health Avenue, Medical District</p>
                                 <p>Cityville, State 12345</p>
                                 <p>Phone: +1 (555) 123-4567 | Email: pharmacy@clinicsys.com</p>
                             </div>
                             <div class="invoice-details">
                                 <h2>TAX INVOICE</h2>
-                                <p><strong>Invoice No:</strong> #INV-${Math.floor(Math.random() * 100000)}</p>
+                                <p><strong>Invoice No:</strong> ${invoiceNumber}</p>
                                 <p><strong>Date:</strong> ${new Date().toLocaleDateString()}</p>
                                 <p><strong>Appt Ref:</strong> ${apptGroup.appointment}</p>
                             </div>
@@ -152,15 +164,15 @@ const PharmacyPrescriptions = () => {
                         <div class="totals">
                             <div class="totals-row">
                                 <span>Subtotal:</span>
-                                <span>$${overallSubtotal.toFixed(2)}</span>
+                                <span>${formatCurrency(overallSubtotal)}</span>
                             </div>
                             <div class="totals-row">
                                 <span>GST (12%):</span>
-                                <span>$${gstAmount.toFixed(2)}</span>
+                                <span>${formatCurrency(gstAmount)}</span>
                             </div>
                             <div class="totals-row grand-total">
                                 <span>Grand Total:</span>
-                                <span>$${totalAmount.toFixed(2)}</span>
+                                <span>${formatCurrency(totalAmount)}</span>
                             </div>
                         </div>
 

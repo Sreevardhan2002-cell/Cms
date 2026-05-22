@@ -1,192 +1,200 @@
-import React, { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../api';
-import { Lock, User, Activity, Calendar, FileText, HeartPulse } from 'lucide-react';
+import { ArrowRight, Lock, Moon, Sun, User } from 'lucide-react';
 
 const Login = () => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [role, setRole] = useState('Administrator');
-    const { login } = useAuth();
+
+    const { login, user } = useAuth();
     const navigate = useNavigate();
 
     const [error, setError] = useState('');
+    const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
+    const isDark = theme === 'dark';
+
+    const panelStyle = {
+        width: '100%',
+        padding: '3.5rem 3.75rem',
+        background: isDark ? 'rgba(15, 23, 42, 0.92)' : 'rgba(255,255,255,0.86)',
+        border: `1px solid ${isDark ? 'rgba(51, 65, 85, 0.72)' : 'rgba(255,255,255,0.6)'}`,
+        textAlign: 'center'
+    };
+
+    const controlStyle = {
+        marginBottom: 0,
+        background: isDark ? 'rgba(15, 23, 42, 0.98)' : '#fff',
+        color: 'var(--text-main)',
+        height: '60px',
+        fontSize: '1.05rem',
+        borderRadius: '16px'
+    };
+
+    useEffect(() => {
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('theme', theme);
+    }, [theme]);
+
+    useEffect(() => {
+        if (!user) return;
+
+        if (user.role === 'Administrator') navigate('/admin', { replace: true });
+        else if (user.role === 'Receptionist') navigate('/reception', { replace: true });
+        else if (user.role === 'Doctor') navigate('/doctor', { replace: true });
+        else if (user.role === 'Pharmacist') navigate('/pharmacy', { replace: true });
+        else if (user.role === 'Lab Technician') navigate('/lab', { replace: true });
+    }, [user, navigate]);
+
+    const toggleTheme = () => {
+        setTheme(currentTheme => (currentTheme === 'dark' ? 'light' : 'dark'));
+    };
 
     const handleLogin = async (e) => {
         e.preventDefault();
         setError('');
-        
+
         try {
             const response = await api.post('auth/login/', {
                 username,
                 password,
                 role
             });
-            
+
             login(response.data);
-            
+
             // Route based on role
             if (role === 'Administrator') navigate('/admin');
             else if (role === 'Receptionist') navigate('/reception');
             else if (role === 'Doctor') navigate('/doctor');
             else if (role === 'Pharmacist') navigate('/pharmacy');
             else if (role === 'Lab Technician') navigate('/lab');
+
         } catch (err) {
             setError(err.response?.data?.error || 'Failed to login');
         }
     };
 
     return (
-        <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: 'var(--background)' }}>
-            
-            {/* Left Side: Branding & Elements (Hidden on small screens) */}
-            <div style={{ 
-                flex: 1.2, 
-                background: 'linear-gradient(135deg, var(--primary-light), var(--primary), var(--primary-hover))',
-                position: 'relative',
+        <div
+            style={{
+                minHeight: '100vh',
                 display: 'flex',
-                flexDirection: 'column',
+                alignItems: 'center',
                 justifyContent: 'center',
-                padding: '4rem',
-                color: 'white',
-                overflow: 'hidden'
-            }} className="login-branding">
-                
-                {/* Abstract Background Elements */}
-                <div style={{ position: 'absolute', top: '-10%', right: '-10%', width: '400px', height: '400px', borderRadius: '50%', background: 'rgba(255,255,255,0.1)', filter: 'blur(40px)' }}></div>
-                <div style={{ position: 'absolute', bottom: '-10%', left: '-10%', width: '500px', height: '500px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)', filter: 'blur(60px)' }}></div>
-                <div style={{ position: 'absolute', top: '40%', right: '20%', width: '200px', height: '200px', borderRadius: '50%', background: 'rgba(16, 185, 129, 0.2)', filter: 'blur(50px)' }}></div>
+                background:
+                    'radial-gradient(circle at top left, rgba(5,150,105,0.12), transparent 28%), radial-gradient(circle at bottom right, rgba(6,182,212,0.08), transparent 26%), var(--background)',
+                padding: '2rem'
+            }}
+        >
+            <button
+                type="button"
+                onClick={toggleTheme}
+                className="theme-toggle"
+                aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                style={{ position: 'fixed', top: '1.5rem', right: '1.5rem', zIndex: 20 }}
+            >
+                {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
 
-                <div style={{ zIndex: 1, maxWidth: '600px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem' }}>
-                        <div style={{ width: '56px', height: '56px', background: 'white', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)', fontWeight: 'bold', fontSize: '1.75rem', boxShadow: '0 10px 25px rgba(0,0,0,0.2)' }}>
-                            C
+                <div
+                    style={{
+                        width: '100%',
+                        maxWidth: '620px'
+                    }}
+                >
+                        <div className="glass-panel" style={panelStyle}>
+                        <div style={{ marginBottom: '2rem' }}>
+                            <div style={{ width: '96px', height: '96px', borderRadius: '28px', margin: '0 auto 1.1rem', background: 'linear-gradient(135deg, var(--primary), var(--primary-hover))', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 14px 28px rgba(5,150,105,0.22)' }}>
+                                <Lock size={42} />
+                            </div>
+                                <h1 style={{ margin: 0, fontSize: '2.9rem', color: 'var(--text-main)', letterSpacing: '-0.04em' }}>MacClinic</h1>
                         </div>
-                        <h1 style={{ fontSize: '2.5rem', fontWeight: '800', margin: 0, letterSpacing: '-0.02em' }}>ClinicSys</h1>
-                    </div>
 
-                    <h2 style={{ fontSize: '3rem', fontWeight: '800', lineHeight: 1.2, marginBottom: '1.5rem' }}>
-                        Modernizing Healthcare Management.
-                    </h2>
-                    <p style={{ fontSize: '1.2rem', color: 'rgba(255,255,255,0.8)', lineHeight: 1.6, marginBottom: '4rem' }}>
-                        A comprehensive, beautifully designed platform tailored for doctors, pharmacists, and administrators to deliver the best patient care.
-                    </p>
+                        {error && (
+                            <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.18)', color: 'var(--danger)', padding: '1rem 1.1rem', borderRadius: '14px', marginBottom: '1.4rem', fontSize: '1rem', textAlign: 'left' }}>
+                                {error}
+                            </div>
+                        )}
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
-                        {[
-                            { icon: Calendar, title: 'Smart Scheduling', desc: 'Seamlessly manage patient queues.' },
-                            { icon: FileText, title: 'Electronic Records', desc: 'Securely store clinical histories.' },
-                            { icon: Activity, title: 'Live Dashboard', desc: 'Real-time analytics and insights.' },
-                            { icon: HeartPulse, title: 'Integrated Care', desc: 'Connected pharmacy & labs.' },
-                        ].map((item, idx) => (
-                            <div key={idx} style={{ display: 'flex', gap: '1rem' }}>
-                                <div style={{ background: 'rgba(255,255,255,0.2)', width: '48px', height: '48px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, backdropFilter: 'blur(10px)' }}>
-                                    <item.icon size={24} color="white" />
-                                </div>
-                                <div>
-                                    <h4 style={{ fontSize: '1.1rem', fontWeight: '700', margin: '0 0 0.25rem 0' }}>{item.title}</h4>
-                                    <p style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.7)', margin: 0 }}>{item.desc}</p>
+                        <form
+                            onSubmit={handleLogin}
+                            style={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '1.35rem',
+                                textAlign: 'left'
+                            }}
+                        >
+                            <div>
+                                <label className="input-label" style={{ fontSize: '1rem' }}>Role</label>
+                                <select
+                                    value={role}
+                                    onChange={(e) => setRole(e.target.value)}
+                                    className="input-field"
+                                    style={controlStyle}
+                                >
+                                    <option>Administrator</option>
+                                    <option>Receptionist</option>
+                                    <option>Doctor</option>
+                                    <option>Pharmacist</option>
+                                    <option>Lab Technician</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="input-label" style={{ fontSize: '1rem' }}>Username</label>
+                                <div style={{ position: 'relative' }}>
+                                    <User size={20} color="var(--text-muted)" style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)' }} />
+                                    <input
+                                        type="text"
+                                        placeholder="Enter username"
+                                        value={username}
+                                        onChange={(e) => setUsername(e.target.value)}
+                                        required
+                                        className="input-field"
+                                        style={{ ...controlStyle, paddingLeft: '3rem' }}
+                                    />
                                 </div>
                             </div>
-                        ))}
-                    </div>
-                </div>
-            </div>
 
-            {/* Right Side: Login Form */}
-            <div style={{ 
-                flex: 1, 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center', 
-                padding: '2rem',
-                position: 'relative'
-            }}>
-                <div className="animate-fade-in" style={{
-                    width: '100%',
-                    maxWidth: '440px',
-                    padding: '3rem',
-                    background: 'var(--surface)',
-                    borderRadius: '24px',
-                    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.05)',
-                    border: '1px solid var(--border)'
-                }}>
-                    <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
-                        <h2 style={{ fontSize: '2rem', fontWeight: '800', color: 'var(--text-main)', marginBottom: '0.5rem' }}>Welcome Back</h2>
-                        <p style={{ color: 'var(--text-muted)', fontSize: '1.05rem' }}>Please enter your credentials to continue</p>
-                    </div>
+                            <div>
+                                <label className="input-label" style={{ fontSize: '1rem' }}>Password</label>
+                                <div style={{ position: 'relative' }}>
+                                    <Lock size={20} color="var(--text-muted)" style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)' }} />
+                                    <input
+                                        type="password"
+                                        placeholder="Enter password"
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        required
+                                        className="input-field"
+                                        style={{ ...controlStyle, paddingLeft: '3rem' }}
+                                    />
+                                </div>
+                            </div>
 
-                    {error && (
-                        <div style={{ padding: '1rem', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', color: 'var(--danger)', borderRadius: '12px', marginBottom: '1.5rem', fontSize: '0.95rem', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <Activity size={18} /> {error}
-                        </div>
-                    )}
-
-                    <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                        
-                        <div className="input-group" style={{ margin: 0 }}>
-                            <label className="input-label" style={{ fontWeight: '600' }}>Select Role</label>
-                            <select 
-                                className="input-field"
-                                value={role}
-                                onChange={(e) => setRole(e.target.value)}
-                                style={{ cursor: 'pointer', appearance: 'none', background: 'var(--background)', fontWeight: '500' }}
+                            <button
+                                type="submit"
+                                className="btn btn-primary"
+                                style={{
+                                    width: '100%',
+                                    padding: '1.1rem 1.35rem',
+                                    marginTop: '0.6rem',
+                                    fontSize: '1.08rem',
+                                    boxShadow: '0 12px 28px rgba(5,150,105,0.22)'
+                                }}
                             >
-                                <option>Administrator</option>
-                                <option>Receptionist</option>
-                                <option>Doctor</option>
-                                <option>Pharmacist</option>
-                                <option>Lab Technician</option>
-                            </select>
-                        </div>
-
-                        <div className="input-group" style={{ margin: 0 }}>
-                            <label className="input-label" style={{ fontWeight: '600' }}>Username</label>
-                            <div style={{ position: 'relative' }}>
-                                <User size={20} style={{ position: 'absolute', left: '1.25rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-                                <input 
-                                    type="text" 
-                                    className="input-field" 
-                                    style={{ paddingLeft: '3.25rem', background: 'var(--background)' }}
-                                    placeholder="Enter your username"
-                                    value={username}
-                                    onChange={(e) => setUsername(e.target.value)}
-                                    required
-                                />
-                            </div>
-                        </div>
-
-                        <div className="input-group" style={{ margin: 0 }}>
-                            <label className="input-label" style={{ fontWeight: '600' }}>Password</label>
-                            <div style={{ position: 'relative' }}>
-                                <Lock size={20} style={{ position: 'absolute', left: '1.25rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-                                <input 
-                                    type="password" 
-                                    className="input-field" 
-                                    style={{ paddingLeft: '3.25rem', background: 'var(--background)' }}
-                                    placeholder="Enter your password"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    required
-                                />
-                            </div>
-                        </div>
-
-                        <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '1rem', height: '56px', fontSize: '1.1rem', borderRadius: '14px', letterSpacing: '0.02em', boxShadow: '0 10px 25px -5px rgba(79, 70, 229, 0.4)' }}>
-                            Sign In to ClinicSys
-                        </button>
-                    </form>
+                                Login
+                                <ArrowRight size={18} />
+                            </button>
+                        </form>
+                    </div>
                 </div>
             </div>
-            
-            {/* Quick responsive styles for mobile */}
-            <style dangerouslySetInnerHTML={{__html: `
-                @media (max-width: 900px) {
-                    .login-branding { display: none !important; }
-                }
-            `}} />
-        </div>
     );
 };
 

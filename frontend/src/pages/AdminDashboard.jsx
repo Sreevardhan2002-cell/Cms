@@ -1,23 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api';
-import { Users, Activity, DollarSign, TrendingUp } from 'lucide-react';
-import { ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { Users, Activity, Pill, Package, AlertTriangle, ClipboardList, CheckCircle2, Layers3 } from 'lucide-react';
 
 const AdminDashboard = () => {
     const [staffList, setStaffList] = useState([]);
     const [roles, setRoles] = useState([]);
-    const [chartData, setChartData] = useState([]);
+    const [medicines, setMedicines] = useState([]);
+    const [stocks, setStocks] = useState([]);
+    const [prescriptions, setPrescriptions] = useState([]);
 
     const fetchData = async () => {
         try {
-            const [staffRes, rolesRes, statsRes] = await Promise.all([
+            const [staffRes, rolesRes, medicinesRes, stocksRes, prescriptionsRes] = await Promise.all([
                 api.get('staff/'),
                 api.get('roles/'),
-                api.get('dashboard/stats/')
+                api.get('medicines/'),
+                api.get('inventory/medicine/'),
+                api.get('prescriptions/medicine/')
             ]);
             setStaffList(staffRes.data);
             setRoles(rolesRes.data);
-            setChartData(statsRes.data);
+            setMedicines(medicinesRes.data);
+            setStocks(stocksRes.data);
+            setPrescriptions(prescriptionsRes.data);
         } catch (err) {
             console.error("Failed to fetch data", err);
         }
@@ -27,15 +32,46 @@ const AdminDashboard = () => {
         fetchData();
     }, []);
 
-    const totalRevenue = chartData.reduce((sum, item) => sum + parseFloat(item.revenue), 0);
-    const totalPatients = chartData.reduce((sum, item) => sum + item.patients, 0);
+    const stockByMedicineId = stocks.reduce((acc, stock) => {
+        acc[stock.medicine] = stock;
+        return acc;
+    }, {});
+
+    const medicineStats = medicines.map(medicine => {
+        const stock = stockByMedicineId[medicine.id];
+        const stockInHand = stock?.stock_in_hand || 0;
+        const reorderLevel = stock?.re_order_level || 5;
+
+        return {
+            ...medicine,
+            stockInHand,
+            reorderLevel,
+            isLowStock: stockInHand <= reorderLevel,
+            isOutOfStock: stockInHand <= 0
+        };
+    });
+
+    const totalMedicines = medicines.length;
+    const totalStockUnits = stocks.reduce((sum, stock) => sum + (stock.stock_in_hand || 0), 0);
+    const lowStockMedicines = medicineStats.filter(item => item.isLowStock).length;
+    const outOfStockMedicines = medicineStats.filter(item => item.isOutOfStock).length;
+    const pendingPrescriptions = prescriptions.filter(item => !item.is_dispensed).length;
+    const dispensedPrescriptions = prescriptions.filter(item => item.is_dispensed).length;
+    const activeCategories = new Set(medicines.map(item => item.category)).size;
+    const mostRequestedMedicine = prescriptions.reduce((acc, item) => {
+        const medicineId = item.medicine;
+        acc[medicineId] = (acc[medicineId] || 0) + 1;
+        return acc;
+    }, {});
+    const topMedicineId = Object.entries(mostRequestedMedicine).sort((a, b) => b[1] - a[1])[0]?.[0];
+    const topMedicineName = medicines.find(item => String(item.id) === String(topMedicineId))?.medicine_name || 'No prescriptions yet';
 
     return (
         <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                 <div>
                     <h1>Dashboard Overview</h1>
-                    <p style={{ color: 'var(--text-muted)' }}>Monitor clinic operations, revenue, and staff members.</p>
+                    <p style={{ color: 'var(--text-muted)' }}>Monitor pharmacy inventory, prescriptions, and staff members.</p>
                 </div>
             </div>
 
@@ -43,11 +79,11 @@ const AdminDashboard = () => {
                 <div className="glass-panel stat-card">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                         <div>
-                            <div className="stat-label">Total Revenue</div>
-                            <div className="stat-value">${totalRevenue.toFixed(2)}</div>
+                            <div className="stat-label">Total Medicines</div>
+                            <div className="stat-value">{totalMedicines}</div>
                         </div>
                         <div style={{ padding: '0.75rem', background: 'rgba(79, 70, 229, 0.1)', borderRadius: '12px', color: 'var(--primary)' }}>
-                            <DollarSign size={24} />
+                            <Pill size={24} />
                         </div>
                     </div>
                 </div>
@@ -55,11 +91,11 @@ const AdminDashboard = () => {
                 <div className="glass-panel stat-card">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                         <div>
-                            <div className="stat-label">Total Patients</div>
-                            <div className="stat-value">{totalPatients}</div>
+                            <div className="stat-label">Stock Units</div>
+                            <div className="stat-value">{totalStockUnits}</div>
                         </div>
                         <div style={{ padding: '0.75rem', background: 'rgba(16, 185, 129, 0.1)', borderRadius: '12px', color: 'var(--success)' }}>
-                            <TrendingUp size={24} />
+                            <Package size={24} />
                         </div>
                     </div>
                 </div>
@@ -67,11 +103,11 @@ const AdminDashboard = () => {
                 <div className="glass-panel stat-card">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                         <div>
-                            <div className="stat-label">Total Staff</div>
-                            <div className="stat-value">{staffList.length}</div>
+                            <div className="stat-label">Pending Prescriptions</div>
+                            <div className="stat-value">{pendingPrescriptions}</div>
                         </div>
                         <div style={{ padding: '0.75rem', background: 'rgba(245, 158, 11, 0.1)', borderRadius: '12px', color: 'var(--warning)' }}>
-                            <Users size={24} />
+                            <ClipboardList size={24} />
                         </div>
                     </div>
                 </div>
@@ -79,41 +115,63 @@ const AdminDashboard = () => {
                 <div className="glass-panel stat-card">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                         <div>
-                            <div className="stat-label">Active Doctors</div>
-                            <div className="stat-value">
-                                {staffList.filter(s => s.role === roles.find(r => r.role_name === 'Doctor')?.id && s.is_active).length}
-                            </div>
+                            <div className="stat-label">Low Stock Items</div>
+                            <div className="stat-value">{lowStockMedicines}</div>
                         </div>
                         <div style={{ padding: '0.75rem', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '12px', color: 'var(--danger)' }}>
-                            <Activity size={24} />
+                            <AlertTriangle size={24} />
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div className="glass-panel" style={{ padding: '1.5rem', marginBottom: '2.5rem' }}>
-                <h2 style={{ margin: '0 0 1.5rem 0', fontSize: '1.25rem' }}>Daily Revenue & Patient Trends</h2>
-                <div style={{ height: '400px', width: '100%' }}>
-                    {chartData.length > 0 ? (
-                        <ResponsiveContainer width="100%" height="100%">
-                            <ComposedChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                                <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
-                                <XAxis dataKey="date" stroke="var(--text-muted)" />
-                                <YAxis yAxisId="left" stroke="var(--text-muted)" />
-                                <YAxis yAxisId="right" orientation="right" stroke="var(--text-muted)" />
-                                <Tooltip 
-                                    contentStyle={{ background: 'var(--background)', border: '1px solid var(--border)', borderRadius: '8px', color: 'var(--text-main)' }}
-                                />
-                                <Legend />
-                                <Bar yAxisId="left" dataKey="revenue" name="Revenue ($)" fill="var(--primary)" radius={[4, 4, 0, 0]} barSize={40} />
-                                <Line yAxisId="right" type="monotone" dataKey="patients" name="Patients Count" stroke="var(--success)" strokeWidth={3} dot={{ r: 4 }} />
-                            </ComposedChart>
-                        </ResponsiveContainer>
-                    ) : (
-                        <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
-                            No data available yet.
+            <div className="grid-cards" style={{ marginBottom: '2.5rem', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
+                <div className="glass-panel stat-card">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div>
+                            <div className="stat-label">Dispensed Prescriptions</div>
+                            <div className="stat-value">{dispensedPrescriptions}</div>
                         </div>
-                    )}
+                        <div style={{ padding: '0.75rem', background: 'rgba(16, 185, 129, 0.1)', borderRadius: '12px', color: 'var(--success)' }}>
+                            <CheckCircle2 size={24} />
+                        </div>
+                    </div>
+                </div>
+
+                <div className="glass-panel stat-card">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div>
+                            <div className="stat-label">Out of Stock</div>
+                            <div className="stat-value">{outOfStockMedicines}</div>
+                        </div>
+                        <div style={{ padding: '0.75rem', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '12px', color: 'var(--danger)' }}>
+                            <Layers3 size={24} />
+                        </div>
+                    </div>
+                </div>
+
+                <div className="glass-panel stat-card">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div>
+                            <div className="stat-label">Medicine Categories</div>
+                            <div className="stat-value">{activeCategories}</div>
+                        </div>
+                        <div style={{ padding: '0.75rem', background: 'rgba(245, 158, 11, 0.1)', borderRadius: '12px', color: 'var(--warning)' }}>
+                            <Activity size={24} />
+                        </div>
+                    </div>
+                </div>
+
+                <div className="glass-panel stat-card">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div>
+                            <div className="stat-label">Top Requested</div>
+                            <div className="stat-value" style={{ fontSize: '1.2rem' }}>{topMedicineName}</div>
+                        </div>
+                        <div style={{ padding: '0.75rem', background: 'rgba(79, 70, 229, 0.1)', borderRadius: '12px', color: 'var(--primary)' }}>
+                            <Users size={24} />
+                        </div>
+                    </div>
                 </div>
             </div>
 

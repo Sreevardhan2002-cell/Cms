@@ -1,32 +1,45 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import api from '../api';
-import { Users, Calendar, Activity } from 'lucide-react';
+import { Users, Calendar } from 'lucide-react';
 
 const ReceptionDashboard = () => {
     const [stats, setStats] = useState({
         totalPatients: 0,
         appointmentsToday: 0
     });
-
-    const fetchData = async () => {
-        try {
-            const todayStr = new Date().toISOString().split('T')[0];
-            const [patientsRes, appointmentsRes] = await Promise.all([
-                api.get('patients/'),
-                api.get(`appointments/?date=${todayStr}`)
-            ]);
-            
-            setStats({
-                totalPatients: patientsRes.data.length,
-                appointmentsToday: appointmentsRes.data.length
-            });
-        } catch (error) {
-            console.error("Failed to fetch dashboard data", error);
-        }
-    };
+    const [recentPatients, setRecentPatients] = useState([]);
 
     useEffect(() => {
-        fetchData();
+        void (async () => {
+            try {
+                const todayStr = new Date().toISOString().split('T')[0];
+                const [patientsRes, appointmentsRes] = await Promise.all([
+                    api.get('patients/'),
+                    api.get(`appointments/?date=${todayStr}`)
+                ]);
+
+                const patients = patientsRes.data || [];
+
+                setStats({
+                    totalPatients: patients.length,
+                    appointmentsToday: appointmentsRes.data.length
+                });
+
+                setRecentPatients(
+                    patients
+                        .slice(-5)
+                        .reverse()
+                        .map(p => ({
+                            id: p.id,
+                            patient_name: p.patient_name,
+                            gender: p.gender,
+                            mobile_number: p.mobile_number
+                        }))
+                );
+            } catch (error) {
+                console.error("Failed to fetch dashboard data", error);
+            }
+        })();
     }, []);
     return (
         <div>
@@ -61,10 +74,35 @@ const ReceptionDashboard = () => {
                 </div>
             </div>
             
-            <div className="glass-panel" style={{ padding: '2rem', textAlign: 'center' }}>
-                <Activity size={48} style={{ color: 'var(--text-muted)', marginBottom: '1rem' }} />
-                <h3>Ready for the day!</h3>
-                <p style={{ color: 'var(--text-muted)' }}>Use the sidebar to add new patients or schedule appointments.</p>
+            <div className="glass-panel" style={{ padding: '2rem' }}>
+                <h3 style={{ marginBottom: '0.5rem' }}>Total Patients</h3>
+                <p style={{ color: 'var(--text-muted)', marginBottom: '1.25rem' }}>
+                    {stats.totalPatients} registered patients in the system.
+                </p>
+
+                {recentPatients.length === 0 ? (
+                    <p style={{ color: 'var(--text-muted)', margin: 0 }}>No patient records available.</p>
+                ) : (
+                    <div style={{ display: 'grid', gap: '0.65rem' }}>
+                        {recentPatients.map(patient => (
+                            <div
+                                key={patient.id}
+                                style={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    gap: '1rem',
+                                    padding: '0.85rem 1rem',
+                                    border: '1px solid var(--border)',
+                                    borderRadius: '10px',
+                                    background: 'var(--surface)'
+                                }}
+                            >
+                                <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>{patient.patient_name}</span>
+                                <span style={{ color: 'var(--text-muted)' }}>{patient.gender} • {patient.mobile_number}</span>
+                            </div>
+                        ))}
+                    </div>
+                )}
             </div>
         </div>
     );

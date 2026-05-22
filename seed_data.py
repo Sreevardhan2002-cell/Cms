@@ -21,7 +21,7 @@ def seed():
 
     print("Seeding default administrator...")
     admin_role = Role.objects.get(role_name="Administrator")
-    Staff.objects.get_or_create(username="admin", defaults={"full_name": "System Administrator", "gender": "Other", "joining_date": "2023-01-01", "mobile_number": "1234567890", "password": "password", "role": admin_role})
+    Staff.objects.get_or_create(username="admin", defaults={"full_name": "System Administrator", "gender": "Other", "joining_date": "2023-01-01", "mobile_number": "1234567890", "password": "admin", "role": admin_role})
 
     print("Seeding default receptionist...")
     rec_role = Role.objects.get(role_name="Receptionist")
@@ -46,7 +46,7 @@ def seed():
     for cat in med_cats:
         MedicineCategory.objects.get_or_create(category_name=cat)
 
-    print("Seeding complete! You can login with usernames 'admin', 'receptionist', 'doctor', or 'pharmacist' (password: 'password').")
+    print("Seeding complete! You can login with usernames 'admin' (password: 'admin'), 'receptionist', 'doctor', or 'pharmacist' (password: 'password').")
 
 if __name__ == '__main__':
     seed()

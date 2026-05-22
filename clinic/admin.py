@@ -1,5 +1,4 @@
 from django.contrib import admin
-from django.contrib.auth.hashers import make_password
 from .models import (
     Role, Staff, Specialization, Doctor, Membership, Patient,
     Appointment, Consultation, MedicineCategory, Medicine,
@@ -7,7 +6,6 @@ from .models import (
     LabTestPrescription, MedicineStock
 )
 
-# Custom Admin for Staff to handle password hashing
 @admin.register(Role)
 class RoleAdmin(admin.ModelAdmin):
     list_display = ['id', 'role_name', 'is_active']
@@ -42,9 +40,6 @@ class StaffAdmin(admin.ModelAdmin):
     )
     
     def save_model(self, request, obj, form, change):
-        # Hash the password before saving
-        if form.cleaned_data.get('password'):
-            obj.password = make_password(form.cleaned_data['password'])
         super().save_model(request, obj, form, change)
     
     def get_readonly_fields(self, request, obj=None):

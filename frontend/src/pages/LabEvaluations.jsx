@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import api from '../api';
 import { FlaskConical, CheckCircle, FileText, AlertCircle, Clock, History, Printer } from 'lucide-react';
 
@@ -26,7 +26,9 @@ const LabEvaluations = () => {
     };
 
     useEffect(() => {
-        fetchPrescriptions();
+        void (async () => {
+            await fetchPrescriptions();
+        })();
     }, []);
 
     const handleEvaluateClick = (pres) => {
@@ -60,7 +62,7 @@ const LabEvaluations = () => {
         printWindow.document.write(`
             <html>
                 <head>
-                    <title>Lab Invoice - ClinicSys</title>
+                    <title>Lab Invoice - Maclinic</title>
                     <style>
                         body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; padding: 40px; color: #2d3748; background: #f7fafc; }
                         .invoice-box { max-width: 800px; margin: auto; padding: 40px; border: 1px solid #e2e8f0; background: #fff; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); border-radius: 8px; }
@@ -86,10 +88,10 @@ const LabEvaluations = () => {
                     <div class="invoice-box">
                         <div class="header">
                             <div class="hospital-details">
-                                <h1>ClinicSys Hospital</h1>
+                                <h1>Maclinic Hospital</h1>
                                 <p>123 Health Avenue, Medical District</p>
                                 <p>Cityville, State 12345</p>
-                                <p>Phone: +1 (555) 123-4567 | Email: lab@clinicsys.com</p>
+                                <p>Phone: 345678977 | Email: lab@maclinic.com</p>
                             </div>
                             <div class="invoice-details">
                                 <h2>LAB INVOICE</h2>
@@ -157,7 +159,7 @@ const LabEvaluations = () => {
         printWindow.document.write(`
             <html>
                 <head>
-                    <title>Lab Report - ClinicSys</title>
+                    <title>Lab Report - Maclinic</title>
                     <style>
                         body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; padding: 40px; color: #2d3748; }
                         h1 { color: #4F46E5; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; }
@@ -168,9 +170,9 @@ const LabEvaluations = () => {
                     </style>
                 </head>
                 <body>
-                    <h1>ClinicSys Lab Report</h1>
+                    <h1>Maclinic Lab Report</h1>
                     <div class="details">
-                        <p><strong>Date:</strong> ${new Date(pres.created_date || Date.now()).toLocaleDateString()}</p>
+                        <p><strong>Date:</strong> ${pres.created_date ? new Date(pres.created_date).toLocaleDateString() : 'N/A'}</p>
                         <p><strong>Appointment ID:</strong> ${pres.appointment}</p>
                     </div>
                     <table>
@@ -262,9 +264,8 @@ const LabEvaluations = () => {
                 </div>
             )}
 
-            <div className="glass-panel">
-                <div className="table-container">
-                    <table className="table">
+            <div className="table-container" style={{ borderRadius: 0 }}>
+                <table className="table">
                         <thead>
                             <tr>
                                 <th>Test ID</th>
@@ -278,7 +279,7 @@ const LabEvaluations = () => {
                         <tbody>
                             {displayedTests.length === 0 ? (
                                 <tr>
-                                    <td colSpan="6" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
+                                    <td colSpan="6" style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--text-muted)', verticalAlign: 'top' }}>
                                         {activeTab === 'Pending' ? 'No pending lab tests.' : 'No completed tests yet.'}
                                     </td>
                                 </tr>
@@ -320,8 +321,7 @@ const LabEvaluations = () => {
                                 </tr>
                             ))}
                         </tbody>
-                    </table>
-                </div>
+                </table>
             </div>
 
             {/* Evaluate Modal */}

@@ -81,19 +81,24 @@ const AdminStaffManagement = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
+            const normalizedUsername = formData.username.trim();
+            const normalizedPassword = formData.password.trim();
             const isDoctor = roles.find(r => r.id === parseInt(formData.role))?.role_name === 'Doctor';
-            const updateData = { ...formData };
+            const updateData = { ...formData, username: normalizedUsername };
             delete updateData.specialization; // Specialization is not part of Staff model
 
             let staffId;
 
             if (editingStaff) {
-                if (!updateData.password) {
+                if (!normalizedPassword) {
                     delete updateData.password;
+                } else {
+                    updateData.password = normalizedPassword;
                 }
                 await api.patch(`staff/${editingStaff.id}/`, updateData);
                 staffId = editingStaff.id;
             } else {
+                updateData.password = normalizedPassword;
                 const res = await api.post('staff/', updateData);
                 staffId = res.data.id;
             }
